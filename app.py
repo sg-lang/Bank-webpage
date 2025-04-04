@@ -61,6 +61,10 @@ class BankSystem:
         return accounts_details
 
 # API Routes
+@app.route("/")
+def home():
+    return "Welcome to the Banking System API! Use the appropriate endpoints to interact with the system."
+
 @app.route("/create_account", methods=["POST"])
 def create_account():
     data = request.get_json()
