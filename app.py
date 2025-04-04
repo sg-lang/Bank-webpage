@@ -4,6 +4,10 @@
 # In[ ]:
 
 
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
 class BankAccount:
     def __init__(self, account_number, account_name, balance=0):
         self.account_number = account_number
@@ -13,19 +17,19 @@ class BankAccount:
     def deposit(self, amount):
         if amount > 0:
             self.balance += amount
-            print(f"Deposited: {amount}. New Balance: {self.balance}")
+            return f"Deposited: {amount}. New Balance: {self.balance}"
         else:
-            print("Deposit amount must be positive.")
+            return "Deposit amount must be positive."
 
     def withdraw(self, amount):
         if 0 < amount <= self.balance:
             self.balance -= amount
-            print(f"Withdrew: {amount}. New Balance: {self.balance}")
+            return f"Withdrew: {amount}. New Balance: {self.balance}"
         else:
-            print("Invalid withdrawal amount.")
+            return "Invalid withdrawal amount."
 
     def display_details(self):
-        print(f"Account Number: {self.account_number}, Account Name: {self.account_name}, Balance: {self.balance}")
+        return f"Account Number: {self.account_number}, Account Name: {self.account_name}, Balance: {self.balance}"
 
 class BankSystem:
     def __init__(self):
@@ -33,73 +37,65 @@ class BankSystem:
 
     def create_account(self, account_number, account_name):
         if account_number in self.accounts:
-            print("Account already exists.")
+            return "Account already exists."
         else:
             new_account = BankAccount(account_number, account_name)
             self.accounts[account_number] = new_account
-            print("Account created successfully.")
+            return "Account created successfully."
 
     def transfer_funds(self, from_acc, to_acc, amount):
         if from_acc in self.accounts and to_acc in self.accounts:
             if self.accounts[from_acc].balance >= amount:
                 self.accounts[from_acc].withdraw(amount)
                 self.accounts[to_acc].deposit(amount)
-                print("Transfer completed successfully.")
+                return "Transfer completed successfully."
             else:
-                print("Insufficient funds.")
+                return "Insufficient funds."
         else:
-            print("One or both accounts not found.")
+            return "One or both accounts not found."
 
     def list_accounts(self):
+        accounts_details = []
         for account in self.accounts.values():
-            account.display_details()
+            accounts_details.append(account.display_details())
+        return accounts_details
 
-def main():
-    bank_system = BankSystem()
-    while True:
-        print("\nBanking System Menu:")
-        print("1. Create New Account")
-        print("2. Deposit")
-        print("3. Withdraw")
-        print("4. Transfer Funds")
-        print("5. Display Account Details")
-        print("6. Exit")
+# API Routes
+@app.route("/create_account", methods=["POST"])
+def create_account():
+    data = request.get_json()
+    return jsonify({"message": bank_system.create_account(data["account_number"], data["account_name"])})
 
-        choice = input("Enter choice: ")
+@app.route("/deposit", methods=["POST"])
+def deposit():
+    data = request.get_json()
+    account = bank_system.accounts.get(data["account_number"])
+    if account:
+        return jsonify({"message": account.deposit(data["amount"])})
+    else:
+        return jsonify({"message": "Account not found."}), 404
 
-        if choice == '1':
-            acc_num = input("Enter account number: ")
-            acc_name = input("Enter account holder name: ")
-            bank_system.create_account(acc_num, acc_name)
-        elif choice == '2':
-            acc_num = input("Enter account number: ")
-            amount = float(input("Enter amount to deposit: "))
-            if acc_num in bank_system.accounts:
-                bank_system.accounts[acc_num].deposit(amount)
-            else:
-                print("Account not found.")
-        elif choice == '3':
-            acc_num = input("Enter account number: ")
-            amount = float(input("Enter amount to withdraw: "))
-            if acc_num in bank_system.accounts:
-                bank_system.accounts[acc_num].withdraw(amount)
-            else:
-                print("Account not found.")
-        elif choice == '4':
-            from_acc = input("Enter from account number: ")
-            to_acc = input("Enter to account number: ")
-            amount = float(input("Enter transfer amount: "))
-            bank_system.transfer_funds(from_acc, to_acc, amount)
-        elif choice == '5':
-            bank_system.list_accounts()
-        elif choice == '6':
-            print("Exiting system.")
-            break
-        else:
-            print("Invalid choice, please try again.")
+@app.route("/withdraw", methods=["POST"])
+def withdraw():
+    data = request.get_json()
+    account = bank_system.accounts.get(data["account_number"])
+    if account:
+        return jsonify({"message": account.withdraw(data["amount"])})
+    else:
+        return jsonify({"message": "Account not found."}), 404
+
+@app.route("/transfer", methods=["POST"])
+def transfer():
+    data = request.get_json()
+    return jsonify({"message": bank_system.transfer_funds(data["from_account"], data["to_account"], data["amount"])})
+
+@app.route("/accounts", methods=["GET"])
+def accounts():
+    return jsonify({"accounts": bank_system.list_accounts()})
 
 if __name__ == "__main__":
-    main()
+    bank_system = BankSystem()
+    app.run(debug=True, host="0.0.0.0", port=5000)
 
 
 # In[ ]:
